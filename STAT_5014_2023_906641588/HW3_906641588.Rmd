@@ -1,0 +1,261 @@
+---
+title: "STAT 5014 hw3"
+author: "Owusu Noah"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  pdf_document:
+    fig_caption: yes
+    keep_tex: yes
+    latex_engine: xelatex
+  html_document:
+    df_print: paged
+header-includes:
+- \usepackage{amsmath}
+- \usepackage{amssymb}
+- \usepackage{amsfonts}
+- \usepackage{fancyhdr}
+- \usepackage{booktabs}
+- \pagestyle{fancy}
+- \fancyhf{}
+- \rhead{Owusu Noah}
+- \lhead{STAT PACKAGES hw3}
+- \cfoot{\thepage}
+- \usepackage{algorithm}
+- \usepackage[noend]{algpseudocode}
+- \setlength{\headheight}{13.59999pt}
+geometry: margin=1in
+spacing: single
+fontsize: 11pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, fig.pos = "!H", out.extra = "", out.width = "80%")
+
+library(knitr)
+library(ggplot2)
+library(ggpubr)
+library(dplyr)
+library(readr)
+library(tidyr)
+```
+
+**Part A**
+
+The issue associated with the thickness guage data is that each operator column appears trice and it is a duplication issue that requires tidying of the data.
+
+```{r}
+#importing thickness guage data
+
+dat <- read.csv(file = "Thickness.csv")
+pivot_dat <- dat %>%
+  pivot_longer(cols = c("opt1","opt2","opt3"), names_to = "Operator", 
+               values_to = "Thickness") #making the data more tidy
+```
+
+```{r}
+#creating table for few observations
+kable(head(pivot_dat), align = "cr", 
+      caption = "First six rows of the Thickness dataset")
+```
+
+
+```{r}
+#obtaining summary statistics of the data
+s1 <- pivot_dat %>%
+  group_by(Part) %>%
+  get_summary_stats(Thickness, show = c("mean", "median", "min", "max"))
+
+kable(head(s1), align = "cr", 
+      caption = "Summary statistics of the Thickness dataset across Operator")
+
+s2 <- pivot_dat %>%
+  group_by(Operator) %>%
+  get_summary_stats(Thickness, show = c("mean", "median", "min", "max"))
+kable(head(s2), align = "cr", 
+      caption = "Summary statistics of the Thickness dataset across Part")
+```
+
+```{r}
+# Creating Box Plot for the data
+ggplot(pivot_dat, aes(x = factor(Part), y = Thickness, fill = factor(Operator))) +
+  geom_boxplot() +
+  labs(title = "Box Plot of Thickness Guage  by Part with Operator")
+```
+
+
+**PART B**
+
+Similar to part (A), the Body and Brain weight data has duplication issues. There are also missing values in this data.
+
+```{r}
+# Importing the Body and Brain weight data
+bbw <- read.csv("BodyBrain_wt.csv")
+
+#changing colum names
+colnames(bbw) = c("Body", "Brain", "Body", "Brain", "Body", "Brain")
+
+bd <- as.vector(rbind(bbw$Body,bbw$Body.1,bbw$Body.2))
+bn <- as.vector(rbind(bbw$Brain,bbw$Brain.1,bbw$Brain.2))
+
+df <- data.frame("Body wt" = bd, "Brain wt" = bn)
+
+p_df <- df %>%
+  pivot_longer(cols = c("Body.wt","Brain.wt"), names_to = "variable", 
+               values_to = "weight")
+```
+
+\newpage
+```{r}
+kable(head(p_df), align = "cr", 
+      caption = "First six rows of the Body and Brain weight dataset")
+```
+
+
+```{r}
+#obtaining summary statistics
+df1 <- p_df %>%
+  group_by(factor(variable)) %>%
+  get_summary_stats(weight, show = c("mean", "median", "min", "max"))
+kable(head(df1), align = "cr", 
+      caption = "Summary statistics of the Body and Brain weight dataset")
+```
+
+
+```{r}
+# Create scatter plot for body and brain weight data
+new_df <- df %>% 
+  mutate(across(c(Body.wt, Brain.wt), function(x) log(x)))
+
+new_df <- na.omit(new_df)
+
+ggplot(new_df, aes(x = Brain.wt, y = Body.wt))+
+geom_point(alpha = 0.5, col = "blue")+
+geom_smooth(method = "lm", se = F, formula = y~x, col = "red")+
+ggtitle("Figure 1: Scatter plot of Brain wt vs. Body wt (with linear fit)")+
+stat_cor(method = ('pearson'),col='blue')+
+stat_regline_equation(label.x=4.5, label.y=335, output.type = "latex")+
+labs(x = "Body wt", y = "Brain wt")+
+theme_classic()
+```
+
+
+
+**PART C**
+
+The Long Jump data have duplication issue. Each variable appears four times on the column. There are also missing values in this data.
+
+```{r}
+#importing long jump dataset
+long <- read.csv("LongJump.csv")
+
+l1 <- as.vector(rbind(long$Year,long$Year.1,long$Year.2))
+l2 <- as.vector(rbind(long$Jump,long$Jump.1,long$Jump.2))
+
+df <- data.frame("Year" = l1, "Jump" = l2)
+
+ndf <- df %>%
+  pivot_longer(cols = c("Year","Jump"), names_to = "variable", 
+               values_to = "value")
+kable(head(ndf), align = "cr", 
+      caption = "First six rows of the Long Jump dataset")
+
+```
+
+```{r}
+ndf1 <- ndf %>%
+  group_by(factor(variable)) %>%
+  get_summary_stats(value, show = c("mean", "median", "min", "max"))
+kable(head(ndf1), align = "cr", caption = "Summary statistics of the LongJump dataset")
+```
+
+
+```{r}
+#Creating a scatter plot for the long jump dataset
+ggplot(df, aes(x = Year, y = Jump))+
+geom_point(alpha = 0.5, col = "blue")+
+geom_smooth(method = "lm", se = F, formula = y~x, col = "red")+
+ggtitle("Figure 1: Scatter plot of Long Jump vs. Year (with linear fit)")+
+stat_cor(method = ('pearson'),col='blue')+
+stat_regline_equation(label.x=60, label.y=335, output.type = "latex")+
+labs(x = "Year", y = "Jump")+
+theme_classic()
+```
+
+\newpage
+**PART D**
+
+The issue associated with the tomato data is that the values are embedded between each row and each column.
+
+```{r}
+#importing the tomatoe dataset
+tom <- read.csv(file = "tomato.csv")
+kable(head(tom), align = "cr", 
+      caption = "First six rows of the tomatoe dataset")
+```
+```{r}
+t1 <- tom %>%
+  group_by(Variety) %>%
+  get_summary_stats(PlantDensity, show = c("mean", "median", "min", "max"))
+kable(head(t1), align = "cr", caption = "Summary statistics of the LongJump 
+      dataset across variety")
+```
+
+
+```{r}
+t2 <- tom %>%
+  group_by(Unit) %>%
+  get_summary_stats(PlantDensity, show = c("mean", "median", "min", "max"))
+kable(head(t2), align = "cr", 
+      caption = "Summary statistics of the LongJump dataset across unit")
+```
+
+```{r}
+
+#Creating Box Plot for tomatoe dataset
+ggplot(tom, aes(x = factor(Variety), y = PlantDensity, fill = factor(Unit))) +
+  geom_boxplot() +
+  labs(title = "Box Plot of PlantDensity  by Variety with Unit")
+```
+\
+**Part E**
+
+In the Larvae counts data, the Age and the Treatment variables seem to be interacted and have embedded values.
+
+```{r}
+#importing Larve counts dataset
+LV <- "LarvaeCounts.csv" %>%
+read.csv()
+
+lv_dat <- LV %>%
+  arrange(desc(Counts))
+
+kable(head(lv_dat), align = "cr", caption = "First six rows of Larvae Count 
+      dataset arranged in a descending order of counts")
+```
+
+```{r}
+dt <- lv_dat %>%
+  group_by(Treatment,Age) %>%
+  get_summary_stats(Counts, show = c("mean", "median", "min", "max"))
+kable(head(dt), align = "cr", caption = "Summary of the Larvae count dataset 
+      based on Age and Treatment")
+```
+
+```{r}
+dt <- lv_dat %>%
+  group_by(Block) %>%
+  get_summary_stats(Counts, show = c("mean", "median", "min", "max"))
+kable(head(dt), align = "cr", caption = "Summary of the Larvae count dataset 
+      based on Block")
+```
+
+
+```{r}
+#Creating barplot for Larvae counts dataset
+ggplot(lv_dat, aes(x=factor(Treatment),y=Counts,fill=factor(Age))) +
+geom_bar(position="dodge",stat='identity')+
+ggtitle("Barplot of Larvae Counts vrs Treatment across Age")+
+xlab("Treatment")+ ylab("Larvae Counts")+
+scale_fill_manual(values = c("cyan2","orange"))
+```
+
